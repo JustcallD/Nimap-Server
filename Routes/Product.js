@@ -6,7 +6,7 @@ const category = require("../Schema/category");
 // GET products with pagination
 router.get("/", async (req, res) => {
   const page = req.query.page ? parseInt(req.query.page) : 1;
-  const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 5;
+  const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
   const skip = (page - 1) * pageSize;
   try {
     const totalCount = await Product.countDocuments();

@@ -32,6 +32,15 @@ router.patch("/:id", async (req, res) => {
   const { name } = req.body;
 
   try {
+    const defaultCategoryId = await Category.findOne({ name: "Default" });
+
+    if (!defaultCategoryId) {
+      throw new Error("Default category not found");
+    }
+
+    if (defaultCategoryId._id.toString() === id) {
+      throw new Error("Cannot delete the default category");
+    }
     const updatedCategory = await Category.findByIdAndUpdate(
       id,
       {

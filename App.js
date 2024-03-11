@@ -4,7 +4,7 @@ const cors = require("cors");
 const app = express();
 
 // Apply middleware
-app.use(cors({ origin: "https://nimap-task.netlify.app/", credentials: true }));
+app.use(cors({ origin: "https://nimap-task.netlify.app", credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

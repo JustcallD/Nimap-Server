@@ -21,7 +21,7 @@ router.post("/", (req, res) => {
 
       if (selectResults.length === 0) {
         connection.query(
-          "INSERT INTO categories (id, name) VALUES (1, ?)",
+          "INSERT INTO categories (id, name) VALUES (1, Default)",
           [name],
           (insertError, insertResults) => {
             if (insertError) {

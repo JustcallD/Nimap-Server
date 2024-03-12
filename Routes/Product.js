@@ -1,74 +1,151 @@
 const express = require("express");
 const router = express.Router();
-const Product = require("../Schema/product");
-const category = require("../Schema/category");
+const db = require("../db");
 
-// GET products with pagination
-router.get("/", async (req, res) => {
-  const page = req.query.page ? parseInt(req.query.page) : 1;
-  const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
-  const skip = (page - 1) * pageSize;
-  try {
-    const totalCount = await Product.countDocuments();
-    const products = await Product.find()
-      .skip(skip)
-      .limit(pageSize)
-      .populate("categoryId");
-    res.json({ products: products, total: totalCount });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+const connection = db.createConnection();
 
-// POST a new product
-router.post("/", async (req, res) => {
-  const product = new Product({
-    name: req.body.name,
-    categoryId: req.body.categoryId,
-  });
-  try {
-    const newProduct = await product.save();
-    res.status(201).json(newProduct);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
-router.patch("/:id", async (req, res) => {
-  const id = req.params.id;
+db.connect(connection);
+
+// Create a product
+router.post("/", (req, res) => {
   const { name, categoryId } = req.body;
-  try {
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      {
-        $set: {
-          name,
-          categoryId,
-        },
-      },
-      {
-        new: true,
+
+  const finalCategoryId = categoryId || 1;
+
+  connection.query(
+    "SELECT * FROM categories WHERE id = ?",
+    [finalCategoryId],
+    (selectError, selectResults) => {
+      if (selectError) {
+        console.error("Error checking category: ", selectError);
+        res.status(500).json({ error: "Failed to add product" });
+        return;
+      }
+
+      if (selectResults.length === 0) {
+        
+        connection.query(
+          "SELECT * FROM categories WHERE id = 1",
+          (defaultCategoryError, defaultCategoryResults) => {
+            if (defaultCategoryError) {
+              console.error(
+                "Error checking default category: ",
+                defaultCategoryError
+              );
+              res.status(500).json({ error: "Failed to add product" });
+              return;
+            }
+
+            if (defaultCategoryResults.length === 0) {
+            
+              connection.query(
+                "INSERT INTO categories (id, name) VALUES (1, 'Default')",
+                (insertError, insertResults) => {
+                  if (insertError) {
+                    console.error(
+                      "Error adding default category: ",
+                      insertError
+                    );
+                    res.status(500).json({ error: "Failed to add product" });
+                    return;
+                  }
+                 
+                  addProduct(name, 1);
+                }
+              );
+            } else {
+              
+              addProduct(name, 1);
+            }
+          }
+        );
+      } else {
+        
+        addProduct(name, finalCategoryId);
+      }
+    }
+  );
+
+  // Function to add the product to the database
+  function addProduct(name, categoryId) {
+    connection.query(
+      "INSERT INTO products (name, category_id) VALUES (?, ?)",
+      [name, categoryId],
+      (error, results) => {
+        if (error) {
+          console.error("Error adding product: ", error);
+          res.status(500).json({ error: "Failed to add product" });
+          return;
+        }
+
+        res.status(201).json({ message: "Product added successfully" });
       }
     );
-    if (!updatedProduct) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-    res.json(updatedProduct);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
   }
 });
 
-// DELETE a product
-router.delete("/:id", async (req, res) => {
-  const id = req.params.id;
-  try {
-    const deletedProduct = await Product.findByIdAndDelete(id);
-    if (!deletedProduct) {
-      return res.status(404).json({ message: "Product not found" });
+// Update a product
+router.patch("/:id", (req, res) => {
+  const productId = req.params.id;
+  const { name, categoryId } = req.body;
+  connection.query(
+    "UPDATE products SET name = ?, category_id = ? WHERE id = ?",
+    [name, categoryId, productId],
+    (error, results) => {
+      if (error) {
+        console.error("Error updating product: ", error);
+        res.status(500).json({ error: "Failed to update product" });
+        return;
+      }
+      res.status(200).json({ message: "Product updated successfully" });
     }
-    res.json({ message: "Product deleted successfully" });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+  );
 });
+
+// Get all products with associated category details
+router.get("/", (req, res) => {
+
+  connection.query(
+    "SELECT COUNT(*) AS total FROM products",
+    (countError, countResults) => {
+      if (countError) {
+        console.error("Error fetching total count of products: ", countError);
+        res.status(500).json({ error: "Failed to fetch products" });
+        return;
+      }
+
+      const totalCount = countResults[0].total;
+
+      connection.query(
+        "SELECT p.*, c.id AS category_id, c.name AS category_name FROM products p INNER JOIN categories c ON p.category_id = c.id",
+        (error, results) => {
+          if (error) {
+            console.error("Error fetching products: ", error);
+            res.status(500).json({ error: "Failed to fetch products" });
+            return;
+          }
+          res.status(200).json({ products: results, total: totalCount });
+        }
+      );
+    }
+  );
+});
+
+// Delete a product
+router.delete("/:id", (req, res) => {
+  const productId = req.params.id;
+  connection.query(
+    "DELETE FROM products WHERE id = ?",
+    [productId],
+    (error, results) => {
+      if (error) {
+        console.error("Error deleting product: ", error);
+        res.status(500).json({ error: "Failed to delete product" });
+        return;
+      }
+      res.status(200).json({ message: "Product deleted successfully" });
+    }
+  );
+});
+
 module.exports = router;

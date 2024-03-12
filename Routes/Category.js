@@ -1,89 +1,127 @@
 const express = require("express");
 const router = express.Router();
-const Category = require("../Schema/category");
-const Product = require("../Schema/product");
+const db = require("../db");
 
-// GET all categories
-router.get("/", async (req, res) => {
-  try {
-    const categories = await Category.find();
-    res.json(categories);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+const connection = db.createConnection();
 
-// POST a new category
-router.post("/", async (req, res) => {
-  const category = new Category({
-    name: req.body.name,
-  });
-  try {
-    const newCategory = await category.save();
-    res.status(201).json(newCategory);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
+db.connect(connection);
 
-// UPDATE a category
-router.patch("/:id", async (req, res) => {
-  const { id } = req.params;
+// POST categories
+router.post("/", (req, res) => {
   const { name } = req.body;
 
-  try {
-    const defaultCategoryId = await Category.findOne({ name: "Default" });
+  connection.query(
+    "SELECT * FROM categories WHERE id = 1",
+    (selectError, selectResults) => {
+      if (selectError) {
+        console.error("Error checking default category: ", selectError);
+        res.status(500).json({ error: "Failed to add category" });
+        return;
+      }
 
-    if (!defaultCategoryId) {
-      throw new Error("Default category not found");
+      if (selectResults.length === 0) {
+        connection.query(
+          "INSERT INTO categories (id, name) VALUES (1, ?)",
+          [name],
+          (insertError, insertResults) => {
+            if (insertError) {
+              console.error("Error adding default category: ", insertError);
+              res.status(500).json({ error: "Failed to add category" });
+              return;
+            }
+            res.status(201).json({ message: "Category added successfully" });
+          }
+        );
+      } else {
+        connection.query(
+          "INSERT INTO categories (name) VALUES (?)",
+          [name],
+          (error, results) => {
+            if (error) {
+              console.error("Error adding category: ", error);
+              res.status(500).json({ error: "Failed to add category" });
+              return;
+            }
+            res.status(201).json({ message: "Category added successfully" });
+          }
+        );
+      }
     }
-
-    if (defaultCategoryId._id.toString() === id) {
-      throw new Error("Cannot delete the default category");
-    }
-    const updatedCategory = await Category.findByIdAndUpdate(
-      id,
-      {
-        $set: {
-          name,
-        },
-      },
-      { new: true }
-    );
-    res.json(updatedCategory);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+  );
 });
 
-// DELETE a category
-router.delete("/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const defaultCategoryId = await Category.findOne({ name: "Default" });
-
-    if (!defaultCategoryId) {
-      throw new Error("Default category not found");
+// Get all categories
+router.get("/", (req, res) => {
+  connection.query("SELECT * FROM categories", (error, results) => {
+    if (error) {
+      console.error("Error fetching categories: ", error);
+      res.status(500).json({ error: "Failed to fetch categories" });
+      return;
     }
-
-    if (defaultCategoryId._id.toString() === id) {
-      throw new Error("Cannot delete the default category");
-    }
-    await Category.findByIdAndDelete(id);
-    const productsToUpdate = await Product.find({ categoryId: id });
-    const defaultCategory = await Category.findOne({ name: "Default" });
-
-    await Promise.all(
-      productsToUpdate.map(async (product) => {
-        product.categoryId = defaultCategory._id;
-        await product.save();
-      })
-    );
-
-    res.json({ message: "Category deleted" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+    res.status(200).json(results);
+  });
 });
 
+// Update category by ID
+router.patch("/:id", (req, res) => {
+  const categoryId = req.params.id;
+  const { name } = req.body;
+
+  if (categoryId === "1") {
+    res.status(400).json({ error: "Default category cannot be updated" });
+    return;
+  }
+
+  connection.query(
+    "UPDATE categories SET name = ? WHERE id = ?",
+    [name, categoryId],
+    (error, results) => {
+      if (error) {
+        console.error("Error updating category: ", error);
+        res.status(500).json({ error: "Failed to update category" });
+        return;
+      }
+      res.status(200).json({ message: "Category updated successfully" });
+    }
+  );
+});
+
+// Delete category by ID
+router.delete("/:id", (req, res) => {
+  const categoryId = req.params.id;
+  if (categoryId === "1") {
+    res.status(400).json({ error: "Default category cannot be deleted" });
+    return;
+  }
+
+  // Delete the category
+  connection.query(
+    "DELETE FROM categories WHERE id = ?",
+    [categoryId],
+    (error, results) => {
+      if (error) {
+        console.error("Error deleting category: ", error);
+        res.status(500).json({ error: "Failed to delete category" });
+        return;
+      }
+
+      // If the category is deleted successfully, update the products with default category
+      connection.query(
+        "UPDATE products SET category_id = 1 WHERE category_id = ?",
+        [categoryId],
+        (updateError, updateResults) => {
+          if (updateError) {
+            console.error(
+              "Error updating products after category deletion: ",
+              updateError
+            );
+            res.status(500).json({ error: "Failed to update products" });
+            return;
+          }
+          res.status(200).json({ message: "Category deleted successfully" });
+        }
+      );
+    }
+  );
+});
 module.exports = router;

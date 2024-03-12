@@ -1,17 +1,23 @@
-const dotenv = require("dotenv");
-const connectDB = require("./Config/DB_Config.js");
 const { app } = require("./App.js");
 
-dotenv.config();
+app.listen(process.env.PORT || 4002, () => {
+  console.log(
+    `Server is running at port : http://localhost:${
+      process.env.PORT || 4002
+    } \n`
+  );
+});
 
-connectDB()
-  .then(() => {
-    app.listen(process.env.PORT || 4002, () => {
-      console.log(
-        `Server is running at port : http://localhost:${process.env.PORT} \n`
-      );
-    });
-  })
-  .catch((err) => {
-    console.log("MONGO db connection failed !!! ", err);
-  });
+// var conn = mysql.createConnection({
+//   host: "nimapsql.mysql.database.azure.com",
+//   user: "justcalld",
+//   password: "{your_password}",
+//   database: "{your_database}",
+//   port: 3306,
+//   ssl: { ca: fs.readFileSync("{ca-cert filename}") },
+// });
+
+// host: 'sql.freedb.tech',
+// user: 'freedb_adminmohit',
+// password: 'B!c8tYCpW@yxSW3',
+// database: 'freedb_nimaptask'

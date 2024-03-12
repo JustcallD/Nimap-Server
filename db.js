@@ -8,7 +8,7 @@ function createConnection() {
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
     port: process.env.DB_PORT,
-    ssl: { ca: fs.readFileSync("./ssl/ca.pem") },
+    
   });
 }
 

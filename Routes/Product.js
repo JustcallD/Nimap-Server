@@ -88,33 +88,30 @@ router.patch("/:id", (req, res) => {
 });
 
 // Get all products with associated category details
-router.get("/", (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-  const offset = (page - 1) * limit;
+router.get("/", async (req, res) => {
+  const page = req.query.page ? parseInt(req.query.page) : 1;
+  const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
+  const offset = (page - 1) * pageSize;
 
-  connection.query(
-    "SELECT COUNT(*) AS total FROM products",
-    (countError, countResults) => {
-      if (countError) {
-        res.status(500).json({ error: "Failed to fetch products" });
-        return;
-      }
+  try {
+    // Fetch total count of products
+    const totalCountQuery = util.promisify(connection.query).bind(connection);
+    const totalCountResult = await totalCountQuery(
+      "SELECT COUNT(*) AS total FROM products"
+    );
+    const totalCount = totalCountResult[0].total;
 
-      const totalCount = countResults[0].total;
+    // Fetch paginated products
+    const productsQuery = util.promisify(connection.query).bind(connection);
+    const products = await productsQuery(
+      "SELECT p.*, c.id AS category_id, c.name AS category_name FROM products p INNER JOIN categories c ON p.category_id = c.id LIMIT ? OFFSET ?",
+      [pageSize, offset]
+    );
 
-      connection.query(
-        "SELECT p.*, c.id AS category_id, c.name AS category_name FROM products p INNER JOIN categories c ON p.category_id = c.id LIMIT ? OFFSET ?",
-        [parseInt(limit), parseInt(offset)],
-        (error, results) => {
-          if (error) {
-            res.status(500).json({ error: "Failed to fetch products" });
-            return;
-          }
-          res.status(200).json({ products: results, total: totalCount });
-        }
-      );
-    }
-  );
+    res.json({ products: products, total: totalCount });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
 // Delete a product

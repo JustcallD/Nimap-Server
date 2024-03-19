@@ -17,7 +17,6 @@ router.post("/", (req, res) => {
     [finalCategoryId],
     (selectError, selectResults) => {
       if (selectError) {
-  
         res.status(500).json({ error: "Failed to add product" });
         return;
       }
@@ -27,7 +26,6 @@ router.post("/", (req, res) => {
           "SELECT * FROM categories WHERE id = 1",
           (defaultCategoryError, defaultCategoryResults) => {
             if (defaultCategoryError) {
-
               res.status(500).json({ error: "Failed to add product" });
               return;
             }
@@ -37,7 +35,6 @@ router.post("/", (req, res) => {
                 "INSERT INTO categories (id, name) VALUES (1, 'Default')",
                 (insertError, insertResults) => {
                   if (insertError) {
-
                     res.status(500).json({ error: "Failed to add product" });
                     return;
                   }
@@ -92,6 +89,9 @@ router.patch("/:id", (req, res) => {
 
 // Get all products with associated category details
 router.get("/", (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const offset = (page - 1) * limit;
+
   connection.query(
     "SELECT COUNT(*) AS total FROM products",
     (countError, countResults) => {
@@ -103,7 +103,8 @@ router.get("/", (req, res) => {
       const totalCount = countResults[0].total;
 
       connection.query(
-        "SELECT p.*, c.id AS category_id, c.name AS category_name FROM products p INNER JOIN categories c ON p.category_id = c.id",
+        "SELECT p.*, c.id AS category_id, c.name AS category_name FROM products p INNER JOIN categories c ON p.category_id = c.id LIMIT ? OFFSET ?",
+        [parseInt(limit), parseInt(offset)],
         (error, results) => {
           if (error) {
             res.status(500).json({ error: "Failed to fetch products" });

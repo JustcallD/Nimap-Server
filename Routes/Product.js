@@ -93,25 +93,36 @@ router.get("/", async (req, res) => {
   const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
   const offset = (page - 1) * pageSize;
 
-  try {
-    // Fetch total count of products
-    const totalCountQuery = util.promisify(connection.query).bind(connection);
-    const totalCountResult = await totalCountQuery(
-      "SELECT COUNT(*) AS total FROM products"
-    );
-    const totalCount = totalCountResult[0].total;
-
-    // Fetch paginated products
-    const productsQuery = util.promisify(connection.query).bind(connection);
-    const products = await productsQuery(
-      "SELECT p.*, c.id AS category_id, c.name AS category_name FROM products p INNER JOIN categories c ON p.category_id = c.id LIMIT ? OFFSET ?",
-      [pageSize, offset]
-    );
-
-    res.json({ products: products, total: totalCount });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (isNaN(page) || isNaN(pageSize) || page < 1 || pageSize < 1) {
+    return res
+      .status(400)
+      .json({ error: "Invalid page or pageSize parameter" });
   }
+
+  connection.query(
+    "SELECT COUNT(*) AS total FROM products",
+    (countError, countResults) => {
+      if (countError) {
+        console.error("Error executing count query:", countError);
+        return res.status(500).json({ error: "Failed to fetch product count" });
+      }
+
+      const totalCount = countResults[0].total;
+
+      connection.query(
+        "SELECT p.*, c.id AS category_id, c.name AS category_name FROM products p INNER JOIN categories c ON p.category_id = c.id LIMIT ? OFFSET ?",
+        [pageSize, offset],
+        (error, results) => {
+          if (error) {
+            console.error("Error executing product query:", error);
+            return res.status(500).json({ error: "Failed to fetch products" });
+          }
+          console.log("result", results);
+          res.status(200).json({ products: results, total: totalCount });
+        }
+      );
+    }
+  );
 });
 
 // Delete a product

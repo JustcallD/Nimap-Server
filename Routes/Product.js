@@ -17,50 +17,40 @@ router.post("/", (req, res) => {
     [finalCategoryId],
     (selectError, selectResults) => {
       if (selectError) {
-        console.error("Error checking category: ", selectError);
+  
         res.status(500).json({ error: "Failed to add product" });
         return;
       }
 
       if (selectResults.length === 0) {
-        
         connection.query(
           "SELECT * FROM categories WHERE id = 1",
           (defaultCategoryError, defaultCategoryResults) => {
             if (defaultCategoryError) {
-              console.error(
-                "Error checking default category: ",
-                defaultCategoryError
-              );
+
               res.status(500).json({ error: "Failed to add product" });
               return;
             }
 
             if (defaultCategoryResults.length === 0) {
-            
               connection.query(
                 "INSERT INTO categories (id, name) VALUES (1, 'Default')",
                 (insertError, insertResults) => {
                   if (insertError) {
-                    console.error(
-                      "Error adding default category: ",
-                      insertError
-                    );
+
                     res.status(500).json({ error: "Failed to add product" });
                     return;
                   }
-                 
+
                   addProduct(name, 1);
                 }
               );
             } else {
-              
               addProduct(name, 1);
             }
           }
         );
       } else {
-        
         addProduct(name, finalCategoryId);
       }
     }
@@ -73,7 +63,6 @@ router.post("/", (req, res) => {
       [name, categoryId],
       (error, results) => {
         if (error) {
-          console.error("Error adding product: ", error);
           res.status(500).json({ error: "Failed to add product" });
           return;
         }
@@ -93,7 +82,6 @@ router.patch("/:id", (req, res) => {
     [name, categoryId, productId],
     (error, results) => {
       if (error) {
-        console.error("Error updating product: ", error);
         res.status(500).json({ error: "Failed to update product" });
         return;
       }
@@ -104,12 +92,10 @@ router.patch("/:id", (req, res) => {
 
 // Get all products with associated category details
 router.get("/", (req, res) => {
-
   connection.query(
     "SELECT COUNT(*) AS total FROM products",
     (countError, countResults) => {
       if (countError) {
-        console.error("Error fetching total count of products: ", countError);
         res.status(500).json({ error: "Failed to fetch products" });
         return;
       }
@@ -120,7 +106,6 @@ router.get("/", (req, res) => {
         "SELECT p.*, c.id AS category_id, c.name AS category_name FROM products p INNER JOIN categories c ON p.category_id = c.id",
         (error, results) => {
           if (error) {
-            console.error("Error fetching products: ", error);
             res.status(500).json({ error: "Failed to fetch products" });
             return;
           }
@@ -139,7 +124,6 @@ router.delete("/:id", (req, res) => {
     [productId],
     (error, results) => {
       if (error) {
-        console.error("Error deleting product: ", error);
         res.status(500).json({ error: "Failed to delete product" });
         return;
       }
@@ -149,4 +133,3 @@ router.delete("/:id", (req, res) => {
 });
 
 module.exports = router;
-

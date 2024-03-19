@@ -27,15 +27,5 @@ app.get("/", (req, res) => {
   res.send("server running");
 });
 
-app.get("/connect", async (req, res) => {
-  try {
-    const connection = await connectDB();
-
-    res.status(200).json({ message: "Connected to MySQL database" });
-  } catch (error) {
-    console.error("Error connecting to MySQL:", error);
-    res.status(500).json({ error: "Failed to connect to MySQL database" });
-  }
-});
 
 module.exports = { app };

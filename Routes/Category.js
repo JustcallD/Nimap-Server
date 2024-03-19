@@ -9,12 +9,16 @@ db.connect(connection);
 // POST categories
 router.post("/", (req, res) => {
   const { name } = req.body;
+  if (!name) {
+    res.status(400).json({ error: "Category name is required" });
+    return;
+  }
 
   connection.query(
     "SELECT * FROM categories WHERE id = 1",
     (selectError, selectResults) => {
       if (selectError) {
-        console.error("Error checking default category: ", selectError);
+      
         res.status(500).json({ error: "Failed to add category" });
         return;
       }
@@ -24,7 +28,7 @@ router.post("/", (req, res) => {
           "INSERT INTO categories (id, name) VALUES (1, 'Default')",
           (insertError, insertResults) => {
             if (insertError) {
-              console.error("Error adding default category: ", insertError);
+             
               res.status(500).json({ error: "Failed to add category" });
               return;
             }
@@ -37,7 +41,7 @@ router.post("/", (req, res) => {
           [name],
           (error, results) => {
             if (error) {
-              console.error("Error adding category: ", error);
+             
               res.status(500).json({ error: "Failed to add category" });
               return;
             }
@@ -53,7 +57,7 @@ router.post("/", (req, res) => {
 router.get("/", (req, res) => {
   connection.query("SELECT * FROM categories", (error, results) => {
     if (error) {
-      console.error("Error fetching categories: ", error);
+     
       res.status(500).json({ error: "Failed to fetch categories" });
       return;
     }
@@ -65,6 +69,10 @@ router.get("/", (req, res) => {
 router.patch("/:id", (req, res) => {
   const categoryId = req.params.id;
   const { name } = req.body;
+  if (!name || !categoryId) {
+    res.status(400).json({ error: "Category ID and name are required" });
+    return;
+  }
 
   if (categoryId === "1") {
     res.status(400).json({ error: "Default category cannot be updated" });
@@ -76,7 +84,7 @@ router.patch("/:id", (req, res) => {
     [name, categoryId],
     (error, results) => {
       if (error) {
-        console.error("Error updating category: ", error);
+       
         res.status(500).json({ error: "Failed to update category" });
         return;
       }
@@ -99,7 +107,7 @@ router.delete("/:id", (req, res) => {
     [categoryId],
     (error, results) => {
       if (error) {
-        console.error("Error deleting category: ", error);
+        
         res.status(500).json({ error: "Failed to delete category" });
         return;
       }
@@ -110,10 +118,7 @@ router.delete("/:id", (req, res) => {
         [categoryId],
         (updateError, updateResults) => {
           if (updateError) {
-            console.error(
-              "Error updating products after category deletion: ",
-              updateError
-            );
+           
             res.status(500).json({ error: "Failed to update products" });
             return;
           }

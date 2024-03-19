@@ -1,5 +1,4 @@
 const mysql = require("mysql2");
-const fs = require("fs");
 
 function createConnection() {
   return mysql.createConnection({
@@ -56,7 +55,6 @@ function connect(connection) {
   connection.on("error", function (err) {
     console.error("MySQL connection error:", err);
     if (err.code === "PROTOCOL_CONNECTION_LOST") {
-      console.error("Reconnecting to MySQL...");
       connection = createConnection();
       connect(connection);
     } else {
